@@ -80,3 +80,20 @@ exports.getDummyData = async (req, res) => {
         res.status(500).send(err.message)
     }
 }
+
+exports.searchSong = async (req, res) => {
+    try {
+        const data = await youtube.search.list({
+            part: "snippet",
+            maxResults: 20,
+            q: req.body.input,
+            order: "viewCount",
+            type: "video",
+            regionCode: "IL"
+        })
+        res.send(data.items)
+    }
+    catch(err) {
+        res.status(500).send(err.message)
+    }
+}
