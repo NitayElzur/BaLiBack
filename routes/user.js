@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { getPopularInIsrael } = require('../controllers/user');
+const { getPlaylist, getDummyData } = require('../controllers/user');
 
-router.get('/', getPopularInIsrael)
+router.get('/playlist/:type', getPlaylist);
+router.get('/dummy', getDummyData);
 
 module.exports = router;
