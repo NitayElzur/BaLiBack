@@ -1,10 +1,10 @@
 const google = require('@googleapis/youtube');
-const youtube = google.youtube({ version: 'v3', auth: 'AIzaSyCdyeEugvROwFtsjVWCn3UiaxL-J8C_oZ4' })
+const youtube = google.youtube({ version: 'v3', auth: process.env.AUTH_KEY })
 exports.getPopularInIsrael = async (req, res) => {
     const playlistId = await youtube.search.list({
         part: "snippet",
         maxResults: 20,
-        q: "trending playlists in Israel",
+        q: "פלייליסטים",
         order: "viewCount",
         type: "playlist",
         regionCode: "IL"
@@ -12,7 +12,7 @@ exports.getPopularInIsrael = async (req, res) => {
     youtube.playlistItems.list({
         part: 'snippet',
         playlistId: playlistId.data.items[0].id.playlistId,
-        maxResults: 20
+        maxResults: 20,
     })
         .then(({data}) => res.status(200).json(data.items))
 }
