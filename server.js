@@ -11,7 +11,6 @@ mongoose.connect(process.env.SERVER_LINK, {})
 
 app.use('/song', songRoute)
 app.use('/user', userRoute)
-
 app.listen(3000, () => {
     console.log('Server running');
 })
