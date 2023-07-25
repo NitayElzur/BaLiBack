@@ -1,4 +1,5 @@
 require('dotenv').config()
+const Establishment = require('../models/establishment')
 const google = require('@googleapis/youtube');
 const youtube = google.youtube({ version: 'v3', auth: process.env.AUTH_KEY })
 exports.getPlaylist = async (req, res) => {
@@ -23,6 +24,9 @@ exports.getPlaylist = async (req, res) => {
             type: "playlist"
         })
     }
+    else if (type === 'best') {
+        getPlaceBest(req.body.params.establishment)
+    }
     else {
         return res.status(400).send(`${type} is not a valid type`)
     }
@@ -43,10 +47,22 @@ exports.getPlaylist = async (req, res) => {
             )
         })))
 }
+/**
+ * 
+ * @param {string} establishmentName The name of the establishment
+ * @returns The overall most played songs in a an array
+ * 
+ */
+async function getPlaceBest(establishmentName) {
+    const establishment = await Establishment.findOne({})
+}
 
 exports.getDummyData = async (req, res) => {
     try {
-        fetch('https://youtube.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=PLx0sYbCqOb8TBPRdmBHs5Iftvv9TPboYG&maxResults=20&key=AIzaSyCdyeEugvROwFtsjVWCn3UiaxL-J8C_oZ4')
+        let link
+        if (req.params.type === 'overall') link = 'https://youtube.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=PLx0sYbCqOb8TBPRdmBHs5Iftvv9TPboYG&maxResults=20&key=AIzaSyCdyeEugvROwFtsjVWCn3UiaxL-J8C_oZ4';
+        else if (req.params.type === 'israel') link = "https://youtube.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=PLGl0_ap7UnS9ti7yhKyhUw_JTVYY2TkLJ&maxResults=20&key=AIzaSyCdyeEugvROwFtsjVWCn3UiaxL-J8C_oZ4";
+        fetch(link)
             .then(data => data.json()
                 .then(data => res.status(200).send(data.items.map(v => {
                     return (
