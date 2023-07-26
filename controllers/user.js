@@ -129,6 +129,7 @@ exports.sendSong = async (req, res) => {
                 { $set: { [`history.${data.today}.statistics`]: [...establishment.history[data.today].requested, newSong._id] } }
             )
         } else {
+            const newSong = await Song.create(data)
             establishment.history = {}
             establishment.history[data.today] = {
                 requested: [newSong._id],
