@@ -23,7 +23,7 @@ exports.createSong = async (req, res) => {
 
 /**
  * @param estbName The name of the establishment
- * @param songName The name of the song
+ * @param _id The mongo id of the song
  * @param timePlayed A date object
  * @param numOfVotes An array of user id strings
  * @param numOfSuggests An array of user id strings
@@ -31,7 +31,7 @@ exports.createSong = async (req, res) => {
  */
 exports.updateByKeys = async (req, res) => {
     try {
-        const { estbName, name, timePlayed, numOfVotes, numOfSuggests } = req.body;
+        const { estbName, _id, timePlayed, numOfVotes, numOfSuggests } = req.body;
         let updateObj = {}
         if (timePlayed) {
             updateObj.timePlayed = timePlayed
