@@ -1,8 +1,7 @@
 const router = require('express').Router();
-// const songController = require() //will be controller
+const { createSong, updateByKeys } = require('../controllers/song')
 
-router.get('/',(req, res) => {
-    res.send('yep')
-});
+router.post('/create', createSong);
+router.patch('/update-by-keys', updateByKeys);
 
 module.exports = router;

@@ -50,10 +50,11 @@ exports.getPlaylist = async (req, res) => {
 /**
  * 
  * @param {string} establishmentName The name of the establishment
+ * @param req The request body
  * @returns The overall most played songs in a an array
  * 
  */
-async function getPlaceBest(establishmentName) {
+async function getPlaceBest(establishmentName, req) {
     const establishment = await Establishment.findOne({})
 }
 
@@ -83,17 +84,17 @@ exports.getDummyData = async (req, res) => {
 
 exports.searchSong = async (req, res) => {
     try {
-        const data = await youtube.search.list({
+        const { data } = await youtube.search.list({
             part: "snippet",
             maxResults: 20,
             q: req.body.input,
-            order: "viewCount",
+            order: "relevance",
             type: "video",
             regionCode: "IL"
         })
-        res.send(data.items)
+        res.status(200).send(data.items)
     }
-    catch(err) {
+    catch (err) {
         res.status(500).send(err.message)
     }
 }
