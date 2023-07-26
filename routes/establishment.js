@@ -1,6 +1,7 @@
 const router = require('express').Router();
-const {} = require('../controllers/establishment')
+const { fetchAll, create } = require('../controllers/establishment')
 
-router.get('/fetch-all',)
+router.get('/fetch-all', fetchAll);
+router.post('/create', create);
 
 module.exports = router

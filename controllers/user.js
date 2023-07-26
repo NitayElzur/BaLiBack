@@ -61,8 +61,8 @@ async function getPlaceBest(establishmentName, req) {
 exports.getDummyData = async (req, res) => {
     try {
         let link
-        if (req.params.type === 'overall') link = 'https://youtube.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=PLx0sYbCqOb8TBPRdmBHs5Iftvv9TPboYG&maxResults=20&key=AIzaSyCdyeEugvROwFtsjVWCn3UiaxL-J8C_oZ4';
-        else if (req.params.type === 'israel') link = "https://youtube.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=PLGl0_ap7UnS9ti7yhKyhUw_JTVYY2TkLJ&maxResults=20&key=AIzaSyCdyeEugvROwFtsjVWCn3UiaxL-J8C_oZ4";
+        if (req.params.type === 'overall') link = 'https://youtube.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=PLx0sYbCqOb8TBPRdmBHs5Iftvv9TPboYG&maxResults=20&key=' + process.env.AUTH_KEY;
+        else if (req.params.type === 'israel') link = "https://youtube.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=PLGl0_ap7UnS9ti7yhKyhUw_JTVYY2TkLJ&maxResults=20&key=" + process.env.AUTH_KEY;
         fetch(link)
             .then(data => data.json()
                 .then(data => res.status(200).send(data.items.map(v => {
