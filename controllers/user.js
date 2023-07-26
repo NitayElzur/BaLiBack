@@ -135,3 +135,24 @@ exports.sendSong = async (req, res) => {
         res.status(500).send(err.message)
     }
 }
+
+exports.acceptSong = async (req, res) => {
+    try {
+        const data = req.body
+        const establishment = await Establishment.findOne({ name: data.establishment })
+        const acceptedSong = await Song.findOne({ _id: data.acceptedSong })
+        await Establishment.findOneAndUpdate({ name: data.establishment },
+            { $set: { [`history.${data.timeSent}.accepted`]: [...establishment.history[data.timeSent].accepted, acceptedSong._id] } }
+        )
+        console.log(establishment.history[data.timeSent].requested[0], acceptedSong._id);
+        const newEstablishment = await Establishment.findOneAndUpdate({ name: establishment.name },
+            { $pull: { [`history.${data.timeSent}.requested`]: { $in: [acceptedSong._id] } } },
+            { new: true }
+        )
+        res.status(200).send(newEstablishment)
+    }
+    catch (err) {
+        res.status(500).send(err.message)
+    }
+}
+
