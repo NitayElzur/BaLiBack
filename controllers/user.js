@@ -118,20 +118,21 @@ exports.searchSong = async (req, res) => {
 exports.sendSong = async (req, res) => {
     try {
         const data = req.body
+        const { today } = req.body
         const newSong = await Song.create(data)
         const establishment = await Establishment.findOne({ name: data.establishment })
-        if (establishment.history && Object.keys(establishment.history).includes(data.today)) {
-            console.log(establishment.history[data.today].requested);
+        if (establishment.history && Object.keys(establishment.history).includes(today)) {
+            console.log(establishment.history[today].requested);
             await Establishment.findOneAndUpdate({ name: data.establishment },
-                { $set: { [`history.${data.today}.requested`]: [...establishment.history[data.today].requested, newSong._id] } }
+                { $set: { [`history.${today}.requested`]: [...establishment.history[today].requested, newSong._id] } }
             )
             await Establishment.findOneAndUpdate({ name: data.establishment },
-                { $set: { [`history.${data.today}.statistics`]: [...establishment.history[data.today].requested, newSong._id] } }
+                { $set: { [`history.${today}.statistics`]: [...establishment.history[today].requested, newSong._id] } }
             )
         } else {
             const newSong = await Song.create(data)
             establishment.history = {}
-            establishment.history[data.today] = {
+            establishment.history[today] = {
                 requested: [newSong._id],
                 accepted: [],
                 statistics: [newSong._id]
@@ -190,7 +191,7 @@ exports.getRequested = async (req, res) => {
         })
         res.status(200).send(establishment.history[data.today].requested)
     }
-    catch(err){
+    catch (err) {
         res.status(500).send(err.message)
     }
 }
