@@ -1,5 +1,6 @@
 require('dotenv').config()
 const Establishment = require('../models/establishment')
+const Song = require('../models/song')
 const google = require('@googleapis/youtube');
 const youtube = google.youtube({ version: 'v3', auth: process.env.AUTH_KEY })
 exports.getPlaylist = async (req, res) => {
@@ -82,6 +83,13 @@ exports.getDummyData = async (req, res) => {
     }
 }
 
+
+/**
+ * 
+ * @param {String} input The query for the song search 
+ * @returns An array of objects, each contains a song data
+ */
+
 exports.searchSong = async (req, res) => {
     try {
         const { data } = await youtube.search.list({
@@ -93,6 +101,35 @@ exports.searchSong = async (req, res) => {
             regionCode: "IL"
         })
         res.status(200).send(data.items)
+    }
+    catch (err) {
+        res.status(500).send(err.message)
+    }
+}
+
+exports.sendSong = async (req, res) => {
+    try {
+        const data = req.body
+        const newSong = await Song.create(data)
+        const establishment = await Establishment.findOne({ name: data.establishment })
+        if (establishment.history && Object.keys(establishment.history).includes(data.timeSent)) {
+            console.log(establishment.history[data.timeSent].requested);
+            await Establishment.findOneAndUpdate({ name: data.establishment },
+                { $set: { [`history.${data.timeSent}.requested`]: [...establishment.history[data.timeSent].requested, newSong._id] } }
+            )
+            await Establishment.findOneAndUpdate({ name: data.establishment },
+                { $set: { [`history.${data.timeSent}.statistics`]: [...establishment.history[data.timeSent].requested, newSong._id] } }
+            )
+        } else {
+            establishment.history = {}
+            establishment.history[data.timeSent] = {
+                requested: [newSong._id],
+                accepted: [],
+                statistics: [newSong._id]
+            }
+            await establishment.save();
+        }
+        res.status(200).send(newSong)
     }
     catch (err) {
         res.status(500).send(err.message)
