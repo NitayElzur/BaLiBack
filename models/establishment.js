@@ -23,11 +23,12 @@ const establishmentSchema = new mongoose.Schema({
     history: {
         type: Object, of: {
             accepted: [{ type: mongoose.Types.ObjectId, ref: 'Song' }],
-            requested: [{ type: mongoose.Types.ObjectId, ref: 'Song' }]
+            requested: [{ type: mongoose.Types.ObjectId, ref: 'Song' }],
+            statistics: [{ type: mongoose.Types.ObjectId, ref: 'Song' }]
         }, validate: {
             validator: obj => {
                 const keys = Object.keys(obj);
-                const result = keys.every(v => /^(0?[1-9]|1[0-2])[\/](0?[1-9]|[12]\d|3[01])[\/](19|20)\d{2}$/.test(v))
+                const result = keys.every(v => /^(0?[1-9]|[12]\d|3[01])[\/](0?[1-9]|1[0-2])[\/](19|20)\d{2}$/.test(v))
                 return result;
             },
             message: 'Keys inside hisory must be formatted by dd/mm/yyyy or d/m/yyyy'
