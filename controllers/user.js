@@ -107,22 +107,30 @@ exports.searchSong = async (req, res) => {
     }
 }
 
+/**
+ * 
+ * @param {String} establishemnt The name of the specific establishment.
+ * @param {String} today Today's date (in order to place it at the right day in "history").
+ * @param {String} timeRequested in hh:mm format, in order to know how long the user awaits.
+ * @returns an object of the song that has been sent.
+ */
+
 exports.sendSong = async (req, res) => {
     try {
         const data = req.body
         const newSong = await Song.create(data)
         const establishment = await Establishment.findOne({ name: data.establishment })
-        if (establishment.history && Object.keys(establishment.history).includes(data.timeSent)) {
-            console.log(establishment.history[data.timeSent].requested);
+        if (establishment.history && Object.keys(establishment.history).includes(data.today)) {
+            console.log(establishment.history[data.today].requested);
             await Establishment.findOneAndUpdate({ name: data.establishment },
-                { $set: { [`history.${data.timeSent}.requested`]: [...establishment.history[data.timeSent].requested, newSong._id] } }
+                { $set: { [`history.${data.today}.requested`]: [...establishment.history[data.today].requested, newSong._id] } }
             )
             await Establishment.findOneAndUpdate({ name: data.establishment },
-                { $set: { [`history.${data.timeSent}.statistics`]: [...establishment.history[data.timeSent].requested, newSong._id] } }
+                { $set: { [`history.${data.today}.statistics`]: [...establishment.history[data.today].requested, newSong._id] } }
             )
         } else {
             establishment.history = {}
-            establishment.history[data.timeSent] = {
+            establishment.history[data.today] = {
                 requested: [newSong._id],
                 accepted: [],
                 statistics: [newSong._id]
@@ -136,17 +144,26 @@ exports.sendSong = async (req, res) => {
     }
 }
 
+
+/**
+ * 
+ * @param {String} establishemnt The name of the specific establishment.
+ * @param {String} today Today's date (in order to place it at the right day in "history").
+ * @param {String} acceptedSong The ID of the send that is transfering from "requested" to "accepted"
+ * @returns an object of the song that has been sent.
+ */
+
 exports.acceptSong = async (req, res) => {
     try {
         const data = req.body
         const establishment = await Establishment.findOne({ name: data.establishment })
         const acceptedSong = await Song.findOne({ _id: data.acceptedSong })
         await Establishment.findOneAndUpdate({ name: data.establishment },
-            { $set: { [`history.${data.timeSent}.accepted`]: [...establishment.history[data.timeSent].accepted, acceptedSong._id] } }
+            { $set: { [`history.${data.today}.accepted`]: [...establishment.history[data.today].accepted, acceptedSong._id] } }
         )
-        console.log(establishment.history[data.timeSent].requested[0], acceptedSong._id);
+        console.log(establishment.history[data.today].requested[0], acceptedSong._id);
         const newEstablishment = await Establishment.findOneAndUpdate({ name: establishment.name },
-            { $pull: { [`history.${data.timeSent}.requested`]: { $in: [acceptedSong._id] } } },
+            { $pull: { [`history.${data.today}.requested`]: { $in: [acceptedSong._id] } } },
             { new: true }
         )
         res.status(200).send(newEstablishment)
@@ -156,3 +173,23 @@ exports.acceptSong = async (req, res) => {
     }
 }
 
+
+exports.getRequested = async (req, res) => {
+    try {
+        const data = req.body
+        const establishment = await Establishment.findOne({ name: data.establishment }).populate({
+            path: "history",
+            populate: {
+                path: data.today,
+                populate: {
+                    path: "requested",
+                    model: "Song"
+                }
+            }
+        })
+        res.status(200).send(establishment.history[data.today].requested)
+    }
+    catch(err){
+        res.status(500).send(err.message)
+    }
+}
