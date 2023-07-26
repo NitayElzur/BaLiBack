@@ -107,22 +107,46 @@ exports.searchSong = async (req, res) => {
     }
 }
 
+/**
+ * 
+ * @param timeSent The time of the call to the function
+ * @param establishment The name of the relevant establishment
+ * @param name The name of the song
+ * @param url The url of the song as a youtube link
+ * @returns The new song that is created
+ */
 exports.sendSong = async (req, res) => {
     try {
         const data = req.body
-        const newSong = await Song.create(data)
-        const establishment = await Establishment.findOne({ name: data.establishment })
-        if (establishment.history && Object.keys(establishment.history).includes(data.timeSent)) {
-            console.log(establishment.history[data.timeSent].requested);
-            await Establishment.findOneAndUpdate({ name: data.establishment },
-                { $set: { [`history.${data.timeSent}.requested`]: [...establishment.history[data.timeSent].requested, newSong._id] } }
-            )
-            await Establishment.findOneAndUpdate({ name: data.establishment },
-                { $set: { [`history.${data.timeSent}.statistics`]: [...establishment.history[data.timeSent].requested, newSong._id] } }
-            )
+        const { timeSent } = req.body
+        const establishment = await Establishment.findOne({ name: data.establishment }).populate({
+            path: 'history',
+            populate: {
+                path: timeSent,
+                populate: {
+                    path: "requested",
+                    model: "Song"
+                }
+            }
+        })
+        if(!establishment) return res.status(400).send('There is no establishment with that name')
+        if (establishment.history && Object.keys(establishment.history).includes(timeSent)) {
+            if (establishment.history[timeSent].requested.some(v => v.name === data.name)) {
+                
+            }
+            // else {
+
+            //     await Establishment.findOneAndUpdate({ name: data.establishment },
+            //         { $set: { [`history.${timeSent}.requested`]: [...establishment.history[timeSent].requested, newSong._id] } }
+            //     )
+            //     await Establishment.findOneAndUpdate({ name: data.establishment },
+            //         { $set: { [`history.${timeSent}.statistics`]: [...establishment.history[timeSent].requested, newSong._id] } }
+            //     )
+            // }
         } else {
+            const newSong = await Song.create(data)
             establishment.history = {}
-            establishment.history[data.timeSent] = {
+            establishment.history[timeSent] = {
                 requested: [newSong._id],
                 accepted: [],
                 statistics: [newSong._id]
