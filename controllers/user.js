@@ -2,7 +2,22 @@ require('dotenv').config()
 const Establishment = require('../models/establishment')
 const Song = require('../models/song')
 const google = require('@googleapis/youtube');
-const youtube = google.youtube({ version: 'v3', auth: process.env.AUTH_KEY })
+const youtube = google.youtube({ version: 'v3', auth: process.env.AUTH_KEY });
+const User = require('../models/user');
+exports.createNewUser = async (req, res) => {
+    try {
+        const newUser = await User.create({})
+        res.status(200).send(newUser)
+    }
+    catch (err) {
+        res.status(500).send(err.message)
+    }
+}
+/**
+ * 
+ * @param type Either israel overall, or best
+ * @returns An array containing the song objects of the playlist
+ */
 exports.getPlaylist = async (req, res) => {
     const { type } = req.params
     let playlistId = ''
@@ -113,25 +128,47 @@ exports.searchSong = async (req, res) => {
  * @param {String} today Today's date (in order to place it at the right day in "history").
  * @param {String} timeRequested in hh:mm format, in order to know how long the user awaits.
  * @param {String} url The url of the song in youtube format
+ * @param userId The id of the user that sent the song
  * @returns an object of the song that has been sent.   
  */
-
 exports.sendSong = async (req, res) => {
     try {
-        const data = req.body
-        const { today } = req.body
-        const newSong = await Song.create(data)
-        const establishment = await Establishment.findOne({ name: data.establishment })
+        const data = req.body;
+        const { today, userId } = req.body;
+        const thisUser = await User.findOne({ _id: userId });
+        if (thisUser.numOfSongsRequested.length > 2) return res.status(400).send('This user exceeded its songs for today')
+        if (!userId) return res.status(400).send('Provide a user id');
+        const establishment = await Establishment.findOne({ name: data.establishment }).populate({
+            path: 'history',
+            populate: {
+                path: today,
+                populate: {
+                    path: 'requested',
+                    model: 'Song'
+                }
+            }
+        })
         if (establishment.history && Object.keys(establishment.history).includes(today)) {
-            console.log(establishment.history[today].requested);
-            await Establishment.findOneAndUpdate({ name: data.establishment },
-                { $set: { [`history.${today}.requested`]: [...establishment.history[today].requested, newSong._id] } }
-            )
-            await Establishment.findOneAndUpdate({ name: data.establishment },
-                { $set: { [`history.${today}.statistics`]: [...establishment.history[today].requested, newSong._id] } }
-            )
+            const repeatedSong = establishment.history[today].requested.find(v => v.name === data.name);
+            if (repeatedSong) {
+                const existingSong = await Song.findOneAndUpdate(
+                    { _id: repeatedSong._id },
+                    { $set: { numOfSuggests: [...repeatedSong.numOfSuggests, userId] } }
+                )
+                await User.findOneAndUpdate({ _id: thisUser._id }, { $set: { numOfSongsRequested: [...thisUser.numOfSongsRequested, existingSong._id] } })
+            }
+            else {
+                const newSong = await Song.create({ ...data, numOfSuggests: [userId] })
+                await Establishment.findOneAndUpdate({ name: data.establishment },
+                    { $set: { [`history.${today}.requested`]: [...establishment.history[today].requested, newSong._id] } }
+                )
+                await Establishment.findOneAndUpdate({ name: data.establishment },
+                    { $set: { [`history.${today}.statistics`]: [...establishment.history[today].requested, newSong._id] } }
+                )
+                await User.findOneAndUpdate({ _id: thisUser._id }, { $set: { numOfSongsRequested: [...thisUser.numOfSongsRequested, newSong._id] } })
+            }
         } else {
-            const newSong = await Song.create(data)
+            const newSong = await Song.create({ ...data, numOfSuggests: [userId] })
             if (!establishment.history) establishment.history = {}
             await Establishment.findOneAndUpdate(
                 { name: data.establishment },
@@ -145,8 +182,9 @@ exports.sendSong = async (req, res) => {
                     }
                 }
             );
+            await User.findOneAndUpdate({ _id: thisUser._id }, { $set: { numOfSongsRequested: [...thisUser.numOfSongsRequested, newSong._id] } })
         }
-        res.status(200).send(newSong)
+        res.status(200).send('success')
     }
     catch (err) {
         res.status(500).send(err.message)
