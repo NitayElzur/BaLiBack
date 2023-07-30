@@ -147,6 +147,7 @@ exports.searchSong = async (req, res) => {
  */
 exports.sendSong = async (req, res) => {
     try {
+        let newSong;
         const data = req.body;
         const { today, userId } = req.body;
         const thisUser = await User.findOne({ _id: userId });
@@ -172,7 +173,7 @@ exports.sendSong = async (req, res) => {
                 await User.findOneAndUpdate({ _id: thisUser._id }, { $set: { numOfSongsRequested: [...thisUser.numOfSongsRequested, existingSong._id] } })
             }
             else {
-                const newSong = await Song.create({ ...data, numOfSuggests: [userId] })
+                newSong = await Song.create({ ...data, numOfSuggests: [userId] })
                 await Establishment.findOneAndUpdate({ name: data.establishment },
                     { $set: { [`history.${today}.requested`]: [...establishment.history[today].requested, newSong._id] } }
                 )
@@ -182,7 +183,7 @@ exports.sendSong = async (req, res) => {
                 await User.findOneAndUpdate({ _id: thisUser._id }, { $set: { numOfSongsRequested: [...thisUser.numOfSongsRequested, newSong._id] } })
             }
         } else {
-            const newSong = await Song.create({ ...data, numOfSuggests: [userId] })
+            newSong = await Song.create({ ...data, numOfSuggests: [userId] })
             if (!establishment.history) establishment.history = {}
             await Establishment.findOneAndUpdate(
                 { name: data.establishment },
@@ -198,7 +199,7 @@ exports.sendSong = async (req, res) => {
             );
             await User.findOneAndUpdate({ _id: thisUser._id }, { $set: { numOfSongsRequested: [...thisUser.numOfSongsRequested, newSong._id] } })
         }
-        res.status(200).send('success')
+        res.status(200).send(newSong)
     }
     catch (err) {
         res.status(500).send(err.message)
