@@ -17,7 +17,7 @@ app.use('/user', userRoute);
 app.use('/establishment', establishmentRoute);
 
 app.get('/', (req, res) => {
-    res.status(200).send('Hello world!')
+    res.status(200).send(process.env.CLIENT)
 })
 const server = app.listen(3000, () => {
     console.log('Server running');
