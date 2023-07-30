@@ -24,17 +24,3 @@ app.listen(3000, () => {
 })
 
 require('dotenv').config()
-const io = require('socket.io')(3001, {
-    cors: {
-        origin: [process.env.CLIENT]
-    }
-});
-io.on('connection', socket => {
-    console.log(socket.id);
-    socket.on('test', (obj, room) => {
-        socket.to(room).emit('song-request', obj)
-    })
-    socket.on('join-room', (room) => {
-        socket.join(room)
-    })
-})
