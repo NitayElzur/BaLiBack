@@ -9,8 +9,8 @@ const establishmentRoute = require('./routes/establishment')
 require('dotenv').config();
 app.use(express.json());
 mongoose.connect(process.env.SERVER_LINK, {})
-    .then(() => console.log('Connected to mongoDB'))
-    .catch(err => console.log(err))
+.then(() => console.log('Connected to mongoDB'))
+.catch(err => console.log(err))
 
 app.use('/song', songRoute);
 app.use('/user', userRoute);
