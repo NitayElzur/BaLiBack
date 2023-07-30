@@ -4,6 +4,8 @@ const Song = require('../models/song')
 const google = require('@googleapis/youtube');
 const youtube = google.youtube({ version: 'v3', auth: process.env.AUTH_KEY });
 const User = require('../models/user');
+
+
 exports.createNewUser = async (req, res) => {
     try {
         const newUser = await User.create({})
@@ -13,6 +15,8 @@ exports.createNewUser = async (req, res) => {
         res.status(500).send(err.message)
     }
 }
+
+
 /**
  * 
  * @param type Either israel overall, or best
@@ -115,7 +119,17 @@ exports.searchSong = async (req, res) => {
             type: "video",
             regionCode: "IL"
         })
-        res.status(200).send(data.items)
+        res.status(200).send(data.items.map(v => {
+            return (
+                {
+                    name: v.snippet.title,
+                    artist: v.snippet.channelTitle,
+                    url: `https://www.youtube.com/watch?v=${v.id.videoId}`,
+                    img: v.snippet.thumbnails.default.url,
+                    uploaded: v.snippet.publishedAt,
+                }
+            )
+        }))
     }
     catch (err) {
         res.status(500).send(err.message)
