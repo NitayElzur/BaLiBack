@@ -81,21 +81,37 @@ async function getPlaceBest(establishmentName, req) {
 exports.getDummyData = async (req, res) => {
     try {
         let link
-        if (req.params.type === 'overall') link = 'https://youtube.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=PLx0sYbCqOb8TBPRdmBHs5Iftvv9TPboYG&maxResults=20&key=' + process.env.AUTH_KEY;
-        else if (req.params.type === 'israel') link = "https://youtube.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=PLGl0_ap7UnS9ti7yhKyhUw_JTVYY2TkLJ&maxResults=20&key=" + process.env.AUTH_KEY;
-        fetch(link)
-            .then(data => data.json()
-                .then(data => res.status(200).send(data.items.map(v => {
-                    return (
-                        {
-                            name: v.snippet.title,
-                            artist: v.snippet.videoOwnerChannelTitle,
-                            url: `https://www.youtube.com/watch?v=${v.snippet.resourceId.videoId}`,
-                            img: v.snippet.thumbnails.default.url,
-                            uploaded: v.snippet.publishedAt,
-                        }
-                    )
-                }))))
+        if (req.params.type === 'overall') link = 'PLx0sYbCqOb8TBPRdmBHs5Iftvv9TPboYG';
+        else if (req.params.type === 'israel') link = 'PLGl0_ap7UnS9ti7yhKyhUw_JTVYY2TkLJ';
+        // fetch(link)
+        //     .then(data => data.json();
+        //         .then(data => res.status(200).send(data.items.map(v => {
+        //             return (
+        //                 {
+        //                     name: v.snippet.title,
+        //                     artist: v.snippet.videoOwnerChannelTitle,
+        //                     url: `https://www.youtube.com/watch?v=${v.snippet.resourceId.videoId}`,
+        //                     img: v.snippet.thumbnails.default.url,
+        //                     uploaded: v.snippet.publishedAt,
+        //                 }
+        //             )
+        //         }))))
+        youtube.playlistItems.list({
+            part: "snippet",
+            playlistId: link,
+            maxResults: 20
+        })
+            .then(({ data }) => res.status(200).send(data.items.map(v => {
+                return (
+                    {
+                        name: v.snippet.title,
+                        artist: v.snippet.videoOwnerChannelTitle,
+                        url: `https://www.youtube.com/watch?v=${v.snippet.resourceId.videoId}`,
+                        img: v.snippet.thumbnails.default.url,
+                        uploaded: v.snippet.publishedAt,
+                    }
+                )
+            })))
     }
     catch (err) {
         res.status(500).send(err.message)
