@@ -25,7 +25,9 @@ const server = app.listen(3000, () => {
 require('dotenv').config()
 const io = require('socket.io')(server, {
     cors: {
-        origin: [process.env.CLIENT]
+        origin: '*',
+        methods: ['GET', 'POST'],
+        credentials: true
     }
 });
 io.on('connection', socket => {
