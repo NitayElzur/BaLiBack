@@ -82,7 +82,6 @@ exports.updateEstablishment = async (req, res) => {
 }
 
 
-
 /**
  * 
  * @param {String} establishemnt The name of the specific establishment.
@@ -209,6 +208,32 @@ exports.removeRequest = async (req, res) => {
     }
 }
 
+/**
+ * 
+ * @param {String} establishemnt The name of the specific establishment.
+ * @param {String} today Today's date (in order to place it at the right day in "history").
+ * @returns an array of the accepted songs objects.
+ */
+
+exports.getAccepted = async (req, res) => {
+    try {
+        const data = req.body
+        const establishment = await Establishment.findOne({ name: data.establishment }).populate({
+            path: "history",
+            populate: {
+                path: data.today,
+                populate: {
+                    path: "accepted",
+                    model: "Song"
+                }
+            }
+        })
+        res.status(200).send(establishment.history[data.today].accepted)
+    }
+    catch (err) {
+        res.status(500).send(err.message)
+    }
+}
 
 /**
  * 
