@@ -20,6 +20,7 @@ const songSchema = new mongoose.Schema({
             message: 'Time Played must be in HH/MM format'
         }
     },
+    today: {type: String},
     numOfVotes: [{ type: String }],
     numOfSuggests: [{ type: String }],
     numPlayed: { type: Number },
