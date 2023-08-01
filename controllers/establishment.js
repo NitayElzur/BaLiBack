@@ -49,6 +49,7 @@ exports.fetchSpecific = async (req, res) => {
     try {
         const { name } = req.body;
         const establishment = await Establishment.findOne({ name });
+        if(!establishment) return res.status(400).send('Establishment does not exist')
         res.status(200).send(establishment)
     }
     catch (err) {
