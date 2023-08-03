@@ -272,6 +272,7 @@ exports.removeAccept = async (req, res) => {
 /**
  * 
  * @param {String} establishemnt The name of the specific establishment.
+ * @param {String} splice an integer which represent the length of the desired quntity of songs will be displayed. if a splice will not be mentioned the default length is 20
  * @returns an array of objects, each object contains the song's details: name (of the song), artist, time uploaded to youtube, youtube url, video img.
  */
 
@@ -319,7 +320,11 @@ exports.getEstabBest = async (req, res) => {
             })
             .sort((a, b) => b.count - a.count);
 
-        console.log(totalAccepted);
+        const splice = req.body.splice
+        req.body.splice ?
+        sortedStats.splice(splice, sortedStats.length)
+        :
+        sortedStats.splice(19, sortedStats.length)
         res.status(200).send(sortedStats);
     }
     catch (err) {
