@@ -87,7 +87,7 @@ exports.updateEstablishment = async (req, res) => {
  * 
  * @param {String} establishemnt The name of the specific establishment.
  * @param {String} today Today's date (in order to place it at the right day in "history").
- * @param {String} acceptedSong The ID of the send that is transfering from "requested" to "accepted"
+ * @param {String} acceptedSong The ID of the song that is transfering from "requested" to "accepted"
  * @returns an object of the song that has been sent.
  */
 
@@ -270,6 +270,41 @@ exports.removeAccept = async (req, res) => {
 }
 
 /**
+ * @param establishment The establishment to change
+ * @param today The day to change in
+ * @param accepted The new array to be saved containing the mongo types
+ */
+exports.changeAccepted = async (req, res) => {
+    try {
+        const { establishment, today, accepted } = req.body
+        const thisEstablishment = await Establishment.findOne({ name: establishment }).populate({
+            path: 'history',
+            populate: {
+                path: today,
+                populate: {
+                    path: 'requested',
+                    model: "Song"
+                }
+            }
+        })
+        if (!thisEstablishment) return res.status(400).send('This establishment does not exist');
+        const acceptedSongArray = await Song.find({ _id: { $in: accepted } });
+        if (acceptedSongArray.length === 0) return res.status(400).send('No valid songs were sent');
+        await Establishment.findOneAndUpdate(
+            { _id: thisEstablishment._id },
+            { $set: { [`history.${today}.accepted`]: acceptedSongArray.map(v => v._id) } }
+        )
+        await Establishment.findOneAndUpdate(
+            { _id: thisEstablishment._id },
+            { $set: { [`history.${today}.requested`]: thisEstablishment.history[today].requested.filter(v => !acceptedSongArray.some(j => j._id.toString() === v._id.toString())) } }
+        )
+        res.status(200).send('Success')
+    }
+    catch (err) {
+        res.status(500).send(err.message)
+    }
+}
+
  * 
  * @param {String} establishemnt The name of the specific establishment.
  * @param {String} splice an integer which represent the length of the desired quntity of songs will be displayed. if a splice will not be mentioned the default length is 20
