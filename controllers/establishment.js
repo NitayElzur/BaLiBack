@@ -304,3 +304,65 @@ exports.changeAccepted = async (req, res) => {
         res.status(500).send(err.message)
     }
 }
+
+ * 
+ * @param {String} establishemnt The name of the specific establishment.
+ * @param {String} splice an integer which represent the length of the desired quntity of songs will be displayed. if a splice will not be mentioned the default length is 20
+ * @returns an array of objects, each object contains the song's details: name (of the song), artist, time uploaded to youtube, youtube url, video img.
+ */
+
+exports.getEstabBest = async (req, res) => {
+    try {
+        const data = req.body;
+        const totalAccepted = [];
+        const thisEstablishment = await Establishment.findOne({ name: data.establishment });
+
+        const allSongIds = Object.values(thisEstablishment.history).flatMap(day => day.accepted);
+        const allSongs = await Song.find({
+            _id: { $in: allSongIds }
+        });
+
+        const songMap = allSongs.reduce((map, song) => map.set(String(song._id), song), new Map());
+
+        for (let date in thisEstablishment.history) {
+            thisEstablishment.history[date].accepted = thisEstablishment.history[date].accepted.map(songId => songMap.get(String(songId)));
+            totalAccepted.push(thisEstablishment.history[date].accepted);
+        }
+
+        const playCountMap = new Map();
+
+        totalAccepted.forEach(day => {
+            day.forEach(song => {
+                if (playCountMap.has(song.name)) {
+                    playCountMap.set(song.name, playCountMap.get(song.name) + 1);
+                } else {
+                    playCountMap.set(song.name, 1);
+                }
+            });
+        });
+
+        const sortedStats = Array.from(playCountMap)
+            .map(([song, count]) => {
+                const songDetails = allSongs.find(s => s.name === song);
+                return {
+                    name: song,
+                    count,
+                    url: songDetails.url,
+                    artist: songDetails.artist,
+                    img: songDetails.img,
+                    uploaded: songDetails.uploaded
+                };
+            })
+            .sort((a, b) => b.count - a.count);
+
+        const splice = req.body.splice
+        req.body.splice ?
+        sortedStats.splice(splice, sortedStats.length)
+        :
+        sortedStats.splice(19, sortedStats.length)
+        res.status(200).send(sortedStats);
+    }
+    catch (err) {
+        res.status(500).send(err.message);
+    }
+};
