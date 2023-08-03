@@ -49,7 +49,7 @@ exports.fetchSpecific = async (req, res) => {
     try {
         const { name } = req.body;
         const establishment = await Establishment.findOne({ name });
-        if(!establishment) return res.status(400).send('Establishment does not exist')
+        if (!establishment) return res.status(400).send('Establishment does not exist')
         res.status(200).send(establishment)
     }
     catch (err) {
@@ -87,7 +87,7 @@ exports.updateEstablishment = async (req, res) => {
  * 
  * @param {String} establishemnt The name of the specific establishment.
  * @param {String} today Today's date (in order to place it at the right day in "history").
- * @param {String} acceptedSong The ID of the send that is transfering from "requested" to "accepted"
+ * @param {String} acceptedSong The ID of the song that is transfering from "requested" to "accepted"
  * @returns an object of the song that has been sent.
  */
 
@@ -263,6 +263,42 @@ exports.removeAccept = async (req, res) => {
             { $set: { [`history.${data.today}.accepted`]: establishment.history[data.today].accepted.filter(v => !checkedSongArray.some(j => j._id.toString() === v._id.toString())) } }
         )
         res.status(200).send('ok')
+    }
+    catch (err) {
+        res.status(500).send(err.message)
+    }
+}
+
+/**
+ * @param establishment The establishment to change
+ * @param today The day to change in
+ * @param accepted The new array to be saved containing the mongo types
+ */
+exports.changeAccepted = async (req, res) => {
+    try {
+        const { establishment, today, accepted } = req.body
+        const thisEstablishment = await Establishment.findOne({ name: establishment }).populate({
+            path: 'history',
+            populate: {
+                path: today,
+                populate: {
+                    path: 'requested',
+                    model: "Song"
+                }
+            }
+        })
+        if (!thisEstablishment) return res.status(400).send('This establishment does not exist');
+        const acceptedSongArray = await Song.find({ _id: { $in: accepted } });
+        if (acceptedSongArray.length === 0) return res.status(400).send('No valid songs were sent');
+        await Establishment.findOneAndUpdate(
+            { _id: thisEstablishment._id },
+            { $set: { [`history.${today}.accepted`]: acceptedSongArray.map(v => v._id) } }
+        )
+        await Establishment.findOneAndUpdate(
+            { _id: thisEstablishment._id },
+            { $set: { [`history.${today}.requested`]: thisEstablishment.history[today].requested.filter(v => !acceptedSongArray.some(j => j._id.toString() === v._id.toString())) } }
+        )
+        res.status(200).send('Success')
     }
     catch (err) {
         res.status(500).send(err.message)
