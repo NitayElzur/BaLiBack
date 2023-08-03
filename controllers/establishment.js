@@ -49,7 +49,7 @@ exports.fetchSpecific = async (req, res) => {
     try {
         const { name } = req.body;
         const establishment = await Establishment.findOne({ name });
-        if(!establishment) return res.status(400).send('Establishment does not exist')
+        if (!establishment) return res.status(400).send('Establishment does not exist')
         res.status(200).send(establishment)
     }
     catch (err) {
@@ -268,3 +268,61 @@ exports.removeAccept = async (req, res) => {
         res.status(500).send(err.message)
     }
 }
+
+/**
+ * 
+ * @param {String} establishemnt The name of the specific establishment.
+ * @returns an array of objects, each object contains the song's details: name (of the song), artist, time uploaded to youtube, youtube url, video img.
+ */
+
+exports.getEstabBest = async (req, res) => {
+    try {
+        const data = req.body;
+        const totalAccepted = [];
+        const thisEstablishment = await Establishment.findOne({ name: data.establishment });
+
+        const allSongIds = Object.values(thisEstablishment.history).flatMap(day => day.accepted);
+        const allSongs = await Song.find({
+            _id: { $in: allSongIds }
+        });
+
+        const songMap = allSongs.reduce((map, song) => map.set(String(song._id), song), new Map());
+
+        for (let date in thisEstablishment.history) {
+            thisEstablishment.history[date].accepted = thisEstablishment.history[date].accepted.map(songId => songMap.get(String(songId)));
+            totalAccepted.push(thisEstablishment.history[date].accepted);
+        }
+
+        const playCountMap = new Map();
+
+        totalAccepted.forEach(day => {
+            day.forEach(song => {
+                if (playCountMap.has(song.name)) {
+                    playCountMap.set(song.name, playCountMap.get(song.name) + 1);
+                } else {
+                    playCountMap.set(song.name, 1);
+                }
+            });
+        });
+
+        const sortedStats = Array.from(playCountMap)
+            .map(([song, count]) => {
+                const songDetails = allSongs.find(s => s.name === song);
+                return {
+                    name: song,
+                    count,
+                    url: songDetails.url,
+                    artist: songDetails.artist,
+                    img: songDetails.img,
+                    uploaded: songDetails.uploaded
+                };
+            })
+            .sort((a, b) => b.count - a.count);
+
+        console.log(totalAccepted);
+        res.status(200).send(sortedStats);
+    }
+    catch (err) {
+        res.status(500).send(err.message);
+    }
+};
