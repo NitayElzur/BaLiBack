@@ -24,9 +24,9 @@ const songSchema = new mongoose.Schema({
     numOfVotes: [{ type: String }],
     numOfSuggests: [{ type: String }],
     numPlayed: { type: Number },
-    genre: { type: String },
     artist: { type: String },
-    img: { type: String }
+    img: { type: String },
+    uploaded: {type: String}
 })
 
 module.exports = mongoose.model('Song', songSchema);
