@@ -272,7 +272,7 @@ exports.removeAccept = async (req, res) => {
 /**
  * @param establishment The establishment to change
  * @param today The day to change in
- * @param accepted The new array to be saved containing the mongo types
+ * @param accepted The new array to be saved containing the mongo ids
  */
 exports.changeAccepted = async (req, res) => {
     try {
@@ -289,14 +289,49 @@ exports.changeAccepted = async (req, res) => {
         })
         if (!thisEstablishment) return res.status(400).send('This establishment does not exist');
         const acceptedSongArray = await Song.find({ _id: { $in: accepted } });
-        if (acceptedSongArray.length === 0) return res.status(400).send('No valid songs were sent');
-        await Establishment.findOneAndUpdate(
+        if (acceptedSongArray.length <= 0) return res.status(400).send('No valid songs were sent');
+        acceptedSongArray.sort((a, b) => accepted.indexOf(a._id.toString()) - accepted.indexOf(b._id.toString()));
+        const newEstablishment = await Establishment.findOneAndUpdate(
             { _id: thisEstablishment._id },
-            { $set: { [`history.${today}.accepted`]: acceptedSongArray.map(v => v._id) } }
-        )
+            { $set: { [`history.${today}.accepted`]: acceptedSongArray.map(v => v._id) } },
+            {new: true}
+        ).populate({
+            path: 'history',
+            populate: {
+                path: today,
+                populate: {
+                    path: 'accepted',
+                    model: "Song"
+                }
+            }
+        })
         await Establishment.findOneAndUpdate(
             { _id: thisEstablishment._id },
             { $set: { [`history.${today}.requested`]: thisEstablishment.history[today].requested.filter(v => !acceptedSongArray.some(j => j._id.toString() === v._id.toString())) } }
+        )
+        res.status(200).send(newEstablishment)
+    }
+    catch (err) {
+        res.status(500).send(err.message)
+    }
+}
+
+/**
+ * @param establishment The establishment to change
+ * @param today The day to change in
+ * @param requested The new array to be saved containing the mongo ids
+ */
+exports.changeRequested = async (req, res) => {
+    try {
+        const { establishment, today, requested } = req.body
+        const thisEstablishment = await Establishment.findOne({ name: establishment });
+        if (!thisEstablishment) return res.status(400).send('This establishment does not exist');
+        const requestedSongArray = await Song.find({ _id: { $in: requested } });
+        if (requestedSongArray.length <= 0) return res.status(400).send('No valid songs were sent');
+        requestedSongArray.sort((a, b) => requested.indexOf(a._id.toString()) - requested.indexOf(b._id.toString()));
+        await Establishment.findOneAndUpdate(
+            { _id: thisEstablishment._id },
+            { $set: { [`history.${today}.requested`]: requestedSongArray.map(v => v._id) } }
         )
         res.status(200).send('Success')
     }
