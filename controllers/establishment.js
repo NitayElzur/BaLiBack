@@ -131,18 +131,19 @@ exports.acceptSong = async (req, res) => {
 
 exports.getRequested = async (req, res) => {
     try {
-        const data = req.body
-        const establishment = await Establishment.findOne({ name: data.establishment }).populate({
+        const { establishment, today } = req.body
+        const thisEstablishment = await Establishment.findOne({ name: establishment }).populate({
             path: "history",
             populate: {
-                path: data.today,
+                path: today,
                 populate: {
                     path: "requested",
                     model: "Song"
                 }
             }
         })
-        res.status(200).send(establishment.history[data.today].requested)
+        thisEstablishment.history[today].requested.sort((a, b) => b.numOfSuggests.length - a.numOfSuggests.length)
+        res.status(200).send(thisEstablishment.history[today].requested)
     }
     catch (err) {
         res.status(500).send(err.message)
@@ -294,7 +295,7 @@ exports.changeAccepted = async (req, res) => {
         const newEstablishment = await Establishment.findOneAndUpdate(
             { _id: thisEstablishment._id },
             { $set: { [`history.${today}.accepted`]: acceptedSongArray.map(v => v._id) } },
-            {new: true}
+            { new: true }
         ).populate({
             path: 'history',
             populate: {
