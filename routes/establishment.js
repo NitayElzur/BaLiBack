@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { fetchAll, create, fetchSpecific, updateEstablishment, acceptSong, getRequested, getAccepted, removeRequest, removeAccept, changeAccepted, getEstabBest, changeRequested, getPlaylist } = require('../controllers/establishment')
+const { fetchAll, create, fetchSpecific, updateEstablishment, acceptSong, getRequested, getAccepted, removeRequest, removeAccept, getSongsFromPlaylist, changeAccepted, getEstabBest, changeRequested } = require('../controllers/establishment')
 
 router.get('/fetch-all', fetchAll);
 router.post('/create', create);
@@ -13,5 +13,6 @@ router.patch('/removeAccept', removeAccept);
 router.patch('/change-accepted', changeAccepted);
 router.post('/getEstabBest', getEstabBest);
 router.post('/change-requested', changeRequested);
+router.post('/get-songs-from-playlist', getSongsFromPlaylist);
 
 module.exports = router

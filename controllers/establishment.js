@@ -1,4 +1,4 @@
-const Establishment = require('../models/establishment')
+const Establishment = require('../models/establishment');
 const Song = require('../models/song')
 const google = require('@googleapis/youtube');
 const youtube = google.youtube({ version: 'v3', auth: process.env.AUTH_KEY });
@@ -409,4 +409,97 @@ exports.getEstabBest = async (req, res) => {
     }
 };
 
+/**
+ * @param playlist The string of the playlist
+ * @param today Todays date
+ * @param establishemnt The establishment to push the songs
+ * @returns An array of the first 50 songs of that playlist
+ */
+exports.getSongsFromPlaylist = async (req, res) => {
+    try {
+        let songArr = []
+        const { playlist, today, establishment } = req.body;
+        const [playlistId] = playlist.match(/(?<=list=)[^&]*/)
+        const thisEstablishment = await Establishment.findOne({ name: establishment }).populate({
+            path: 'history',
+            populate: {
+                path: today,
+                populate: [{
+                    path: 'requested',
+                    model: 'Song'
+                }, {
+                    path: 'users',
+                    model: 'User'
+                }, {
+                    path: 'statistics',
+                    model: 'Song'
+                }]
+            }
+        })
+        if(!thisEstablishment) return res.status(400).send('Establishment does not exist')
+        const ytObj = {
+            part: 'snippet',
+            playlistId,
+            maxResults: 50
+        }
+        let stop = false
+        while (!stop) {
+            const { data } = await youtube.playlistItems.list(ytObj)
+            songArr = songArr.concat(data.items.map(v => {
+                return (
+                    {
+                        name: v.snippet.title,
+                        artist: v.snippet.videoOwnerChannelTitle,
+                        url: `https://www.youtube.com/watch?v=${v.snippet.resourceId.videoId}`,
+                        img: v.snippet.thumbnails.default.url,
+                        uploaded: v.snippet.publishedAt,
+                    }
+                )
+            }))
+            if (!data.nextPageToken) stop = true
+            else ytObj.pageToken = data.nextPageToken
+        }
+        const mongoSongArray = await Song.create(songArr)
+        if (thisEstablishment.history && Object.keys(thisEstablishment.history).includes(today)) {
+            await Establishment.findOneAndUpdate({ name: establishment },
+                {
+                    $set: {
+                        [`history.${today}.accepted`]: thisEstablishment.history[today].accepted.concat(mongoSongArray.map(v => v._id)),
+                        [`history.${today}.statistics`]: thisEstablishment.history[today].statistics.concat(mongoSongArray.map(v => v._id)),
+                    }
+                }
+            )
+        }
+        else {
+            if (!thisEstablishment.history) thisEstablishment.history = {}
+            await Establishment.findOneAndUpdate(
+                { name: establishment },
+                {
+                    $set: {
+                        [`history.${today}`]: {
+                            requested: [],
+                            accepted: mongoSongArray.map(v => v._id),
+                            statistics: mongoSongArray.map(v => v._id),
+                            users: []
+                        }
+                    }
+                }
+            );
+        }
+        res.status(200).send('Success');
+    }
+    catch (err) {
+        res.status(500).send(err.message)
+    }
+}
 
+exports.pushToPlayed = async (req, res) => {
+    try {
+        const { today, establishemnt, song } = req.body;
+        const thisEstablishment = await Establishment.findOne({ name: establishemnt });
+        if (!thisEstablishment) return res.status(400).send('')
+    }
+    catch (err) {
+        res.status(500).send(err.message)
+    }
+}
