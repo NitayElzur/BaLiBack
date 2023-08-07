@@ -40,7 +40,7 @@ exports.conversionRate = async (req, res) => {
     const overallConversion = allAccepted.length / allRequested.length
     
 
-    res.status(200).send({daily: `${dailyConversion}%`, overall: `${overallConversion}%`})
+    res.status(200).send({daily: dailyConversion, overall: overallConversion})
   } catch (err) {
     res.status(500).send(err.message)
   }
