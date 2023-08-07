@@ -174,28 +174,16 @@ exports.sendSong = async (req, res) => {
             path: 'history',
             populate: {
                 path: today,
-                populate: {
+                populate: [{
                     path: 'requested',
                     model: 'Song'
-                }
-            }
-        }).populate({
-            path: 'history',
-            populate: {
-                path: today,
-                populate: {
+                }, {
                     path: 'users',
                     model: 'User'
-                }
-            }
-        }).populate({
-            path: 'history',
-            populate: {
-                path: today,
-                populate: {
+                }, {
                     path: 'statistics',
                     model: 'Song'
-                }
+                }]
             }
         })
         if (establishment.history && Object.keys(establishment.history).includes(today)) {
