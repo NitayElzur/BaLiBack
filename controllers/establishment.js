@@ -1,5 +1,7 @@
 const Establishment = require('../models/establishment')
 const Song = require('../models/song')
+const google = require('@googleapis/youtube');
+const youtube = google.youtube({ version: 'v3', auth: process.env.AUTH_KEY });
 /**
  * @returns All the establishments in the DB
  */
@@ -67,13 +69,17 @@ exports.fetchSpecific = async (req, res) => {
  */
 exports.updateEstablishment = async (req, res) => {
     try {
-        const { name, colors, logo, slogan } = req.body;
+        const { name, colors, logo, slogan, playlists } = req.body;
         const establishment = await Establishment.findOne({ name });
         if (!establishment) return res.status(400).send('There is no establishment with that name')
         const updateObj = {};
         if (colors && colors.prime) updateObj.colors = colors;
         if (logo) updateObj.logo = logo;
         if (slogan) updateObj.slogan = slogan;
+        if (playlists && playlists.length > 0) {
+            if (!playlists.some(v => !/^(https\:\/\/www\.youtube\.com\/watch\?).*(list=)/.test(v))) updateObj.playlists = playlists;
+            else return res.status(400).send('Playlists must be a valid youtube playlist link')
+        }
         const result = await Establishment.findOneAndUpdate({ name }, updateObj, { new: true })
         res.status(200).send(result)
     }
@@ -402,3 +408,28 @@ exports.getEstabBest = async (req, res) => {
         res.status(500).send(err.message);
     }
 };
+
+exports.getSongsFromPlaylist = async (req, res) => {
+    try {
+        const { link } = req.body;
+        youtube.playlistItems.list({
+            part: 'snippet',
+            playlistId: playlistId.data.items[0].id.playlistId,
+            maxResults: 20,
+        })
+            .then(({ data }) => res.status(200).send(data.items.map(v => {
+                return (
+                    {
+                        name: v.snippet.title,
+                        artist: v.snippet.videoOwnerChannelTitle,
+                        url: `https://www.youtube.com/watch?v=${v.snippet.resourceId.videoId}`,
+                        img: v.snippet.thumbnails.default.url,
+                        uploaded: v.snippet.publishedAt,
+                    }
+                )
+            })))
+    }
+    catch (err) {
+        res.status(500).send(err.message)
+    }
+}
