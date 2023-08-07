@@ -20,6 +20,12 @@ const establishmentSchema = new mongoose.Schema({
     colors: { type: colorSchema },
     logo: { type: String },
     slogan: { type: String },
+    playlists: [{
+        type: String, validate: {
+            validator: v => /^(https\:\/\/www\.youtube\.com\/watch\?).*(list=)/.test(v),
+            message: 'Playlists must be a valid youtube playlist link'
+        }
+    }],
     history: {
         type: Object, of: {
             accepted: [{ type: mongoose.Types.ObjectId, ref: 'Song' }],

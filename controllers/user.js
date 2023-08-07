@@ -44,9 +44,6 @@ exports.getPlaylist = async (req, res) => {
             type: "playlist"
         })
     }
-    else if (type === 'best') {
-        getPlaceBest(req.body.params.establishment)
-    }
     else {
         return res.status(400).send(`${type} is not a valid type`)
     }
@@ -66,16 +63,6 @@ exports.getPlaylist = async (req, res) => {
                 }
             )
         })))
-}
-/**
- * 
- * @param {string} establishmentName The name of the establishment
- * @param req The request body
- * @returns The overall most played songs in a an array
- * 
- */
-async function getPlaceBest(establishmentName, req) {
-    const establishment = await Establishment.findOne({})
 }
 
 exports.getDummyData = async (req, res) => {
