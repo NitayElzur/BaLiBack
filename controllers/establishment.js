@@ -493,6 +493,13 @@ exports.getSongsFromPlaylist = async (req, res) => {
     }
 }
 
+/**
+ * 
+ * @param today The date to change
+ * @param song The song that was played
+ * @param establishemnt The establishment to change
+ * @returns 
+ */
 exports.pushToPlayed = async (req, res) => {
     try {
         const { today, establishemnt, song } = req.body;
