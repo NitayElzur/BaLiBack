@@ -31,6 +31,7 @@ const establishmentSchema = new mongoose.Schema({
             accepted: [{ type: mongoose.Types.ObjectId, ref: 'Song' }],
             requested: [{ type: mongoose.Types.ObjectId, ref: 'Song' }],
             statistics: [{ type: mongoose.Types.ObjectId, ref: 'Song' }],
+            played: [{type: mongoose.Types.ObjectId, ref: 'Song'}],
             users: [{ type: mongoose.Types.ObjectId, ref: 'User' }]
         }, validate: {
             validator: obj => {
