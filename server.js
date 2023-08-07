@@ -5,7 +5,8 @@ const cors = require('cors');
 app.use(cors());
 const songRoute = require('./routes/song');
 const userRoute = require('./routes/user');
-const establishmentRoute = require('./routes/establishment')
+const establishmentRoute = require('./routes/establishment');
+const statisticsRoute = require('./routes/statistics')
 require('dotenv').config();
 app.use(express.json());
 mongoose.connect(process.env.SERVER_LINK, {})
@@ -15,6 +16,7 @@ mongoose.connect(process.env.SERVER_LINK, {})
 app.use('/song', songRoute);
 app.use('/user', userRoute);
 app.use('/establishment', establishmentRoute);
+app.use('/statistics', statisticsRoute);
 
 app.get('/', (req, res) => {
     res.status(200).send(process.env.CLIENT)

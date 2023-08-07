@@ -13,6 +13,5 @@ router.patch('/removeAccept', removeAccept);
 router.patch('/change-accepted', changeAccepted);
 router.post('/getEstabBest', getEstabBest);
 router.post('/change-requested', changeRequested);
-router.post('/getPlaylist', getPlaylist)
 
 module.exports = router
