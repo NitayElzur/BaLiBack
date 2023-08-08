@@ -77,8 +77,10 @@ exports.updateEstablishment = async (req, res) => {
         if (logo) updateObj.logo = logo;
         if (slogan) updateObj.slogan = slogan;
         if (playlists && playlists.length > 0) {
-            if (!playlists.some(v => !/^(https\:\/\/www\.youtube\.com\/watch\?).*(list=)/.test(v))) updateObj.playlists = playlists;
-            else return res.status(400).send('Playlists must be a valid youtube playlist link')
+            if (playlists.some(v => v.name == null)) return res.status(400).send('Playlist must come in pairs of name and value')
+            else {
+                updateObj.playlists = establishment.playlists.concat(playlists)
+            }
         }
         const result = await Establishment.findOneAndUpdate({ name }, updateObj, { new: true })
         res.status(200).send(result)
@@ -550,7 +552,7 @@ exports.pushToPlayed = async (req, res) => {
         await Establishment.findOneAndUpdate({ _id: thisEstablishment._id },
             { $set: { [`history.${today}.played`]: [...thisEstablishment.history[today].played, thisSong._id] } }
         )
-        const updateObj = {timePlayed: time}
+        const updateObj = { timePlayed: time }
         const newSong = await Song.findOneAndUpdate({ _id: song }, updateObj, { new: true })
 
         res.status(200).send(newSong)
