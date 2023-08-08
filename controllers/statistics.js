@@ -4,7 +4,7 @@ const Song = require('../models/song')
 /**
  * @param establishment name of the specific place (establishment)
  * @param date the desired day to pull the playlist from
- * @returns an array of objects of the specofied date's playlist, each object containing the populated song data
+ * @returns an array of objects of the specified date's playlist, each object containing the populated song data
  */
 
 exports.getPlaylist = async (req, res) => {
