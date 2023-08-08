@@ -10,13 +10,15 @@ const Song = require('../models/song')
 exports.getPlaylist = async (req, res) => {
     try {
       const data = req.body;
-      const establishment = await Establishment.findOne({ name: data.establishment });
-  
       const date = data.date;
-      const acceptedSongs = establishment.history[date].accepted;
-  
-      const populatedSongs = await Song.find({ _id: { $in: acceptedSongs } });
-  
+      const establishment = await Establishment.findOne({ name: data.establishment });
+      let populatedSongs
+      if (establishment.history[date]?.played) {
+        const playedSongs = establishment.history[date].played;
+        populatedSongs = await Song.find({ _id: { $in: playedSongs } });
+      } else {
+        populatedSongs = null
+      }
       res.status(200).send(populatedSongs);
     } catch (err) {
       res.status(500).send(err.message);
@@ -32,12 +34,12 @@ exports.conversionRate = async (req, res) => {
     let dailyConversion
 
     if (thisEstablishment.history[date]) {
-      dailyConversion = thisEstablishment.history[date].statistics.length / thisEstablishment.history[date].requested.length
+      dailyConversion = thisEstablishment.history[date].accepted.length / thisEstablishment.history[date].statistics.length
     }
 
     const allAccepted = Object.values(thisEstablishment.history).flatMap(day => day.accepted);
-    const allRequested = Object.values(thisEstablishment.history).flatMap(day => day.requested);
-    const overallConversion = allAccepted.length / allRequested.length
+    const allStatistics = Object.values(thisEstablishment.history).flatMap(day => day.statistics);
+    const overallConversion = allAccepted.length / allStatistics.length
     
 
     res.status(200).send({daily: dailyConversion, overall: overallConversion})
