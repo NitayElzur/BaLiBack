@@ -351,29 +351,29 @@ exports.changeRequested = async (req, res) => {
 /** 
 * @param {String} establishemnt The name of the specific establishment.
 * @param {String} splice an integer which represent the length of the desired quntity of songs will be displayed. if a splice will not be mentioned the default length is 20
+* @param {Number} number The number of days to return the best from
 * @returns an array of objects, each object contains the song's details: name (of the song), artist, time uploaded to youtube, youtube url, video img.
 */
 
 exports.getEstabBest = async (req, res) => {
     try {
-        const data = req.body;
-        const totalAccepted = [];
-        const thisEstablishment = await Establishment.findOne({ name: data.establishment });
-
-        const allSongIds = Object.values(thisEstablishment.history).flatMap(day => day.accepted);
+        const { number, establishment, splice } = req.body
+        let totalAccepted = [];
+        const thisEstablishment = await Establishment.findOne({ name: establishment });
+        if (!thisEstablishment) return res.status(400).send('Establishment does not exist')
+        let thisEstablishmentValues = Object.values(thisEstablishment.history)
+        if (number) thisEstablishmentValues = thisEstablishmentValues.slice(-number)
+        const allSongIds = thisEstablishmentValues.flatMap(day => day.accepted);
         const allSongs = await Song.find({
             _id: { $in: allSongIds }
         });
-
         const songMap = allSongs.reduce((map, song) => map.set(String(song._id), song), new Map());
-
         for (let date in thisEstablishment.history) {
             thisEstablishment.history[date].accepted = thisEstablishment.history[date].accepted.map(songId => songMap.get(String(songId)));
             totalAccepted.push(thisEstablishment.history[date].accepted);
         }
-
+        totalAccepted = totalAccepted.filter(v => v[0] != null)
         const playCountMap = new Map();
-
         totalAccepted.forEach(day => {
             day.forEach(song => {
                 if (playCountMap.has(song.name)) {
@@ -383,7 +383,6 @@ exports.getEstabBest = async (req, res) => {
                 }
             });
         });
-
         const sortedStats = Array.from(playCountMap)
             .map(([song, count]) => {
                 const songDetails = allSongs.find(s => s.name === song);
@@ -397,9 +396,7 @@ exports.getEstabBest = async (req, res) => {
                 };
             })
             .sort((a, b) => b.count - a.count);
-
-        const splice = req.body.splice
-        req.body.splice ?
+        splice ?
             sortedStats.splice(splice, sortedStats.length)
             :
             sortedStats.splice(19, sortedStats.length)
@@ -414,7 +411,7 @@ exports.getEstabBest = async (req, res) => {
  * @param playlist The string of the playlist or the date to pull from
  * @param today Todays date or the date to populate
  * @param establishemnt The establishment to push the songs into
- * @returns An array of the first 50 songs of that playlist
+ * @returns An array of all the songs of that playlist
  */
 exports.getSongsFromPlaylist = async (req, res) => {
     try {
@@ -467,7 +464,7 @@ exports.getSongsFromPlaylist = async (req, res) => {
             }))
         }
         else {
-            thisEstablishment = await Establishment.findOne({_id: thisEstablishment._id}).populate({
+            thisEstablishment = await Establishment.findOne({ _id: thisEstablishment._id }).populate({
                 path: 'history',
                 populate: {
                     path: playlist,
