@@ -532,7 +532,7 @@ exports.getSongsFromPlaylist = async (req, res) => {
  */
 exports.pushToPlayed = async (req, res) => {
     try {
-        const { today, establishment, song } = req.body;
+        const { today, establishment, song, time } = req.body;
         const thisEstablishment = await Establishment.findOne({ name: establishment }).populate({
             path: 'history',
             populate: {
@@ -550,7 +550,10 @@ exports.pushToPlayed = async (req, res) => {
         await Establishment.findOneAndUpdate({ _id: thisEstablishment._id },
             { $set: { [`history.${today}.played`]: [...thisEstablishment.history[today].played, thisSong._id] } }
         )
-        res.status(200).send('success')
+        const updateObj = {timePlayed: time}
+        const newSong = await Song.findOneAndUpdate({ _id: song }, updateObj, { new: true })
+
+        res.status(200).send(newSong)
     }
     catch (err) {
         res.status(500).send(err.message)
