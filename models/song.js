@@ -11,13 +11,13 @@ const songSchema = new mongoose.Schema({
     timePlayed: {
         type: String, validate: {
             validator: v => /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(v),
-            message: 'Time Played must be in HH/MM format'
+            message: 'Time Played must be in HH:MM format'
         }
     },
     timeRequested: {
         type: String, validate: {
             validator: v => /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(v),
-            message: 'Time Played must be in HH/MM format'
+            message: 'Time Played must be in HH:MM format'
         }
     },
     today: {type: String},
