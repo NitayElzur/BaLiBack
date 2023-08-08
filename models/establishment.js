@@ -21,9 +21,8 @@ const establishmentSchema = new mongoose.Schema({
     logo: { type: String },
     slogan: { type: String },
     playlists: [{
-        type: String, validate: {
-            validator: v => /^(https\:\/\/www\.youtube\.com\/watch\?).*(list=)/.test(v),
-            message: 'Playlists must be a valid youtube playlist link'
+        type: Object, of: {
+            type: String
         }
     }],
     history: {
@@ -31,7 +30,7 @@ const establishmentSchema = new mongoose.Schema({
             accepted: [{ type: mongoose.Types.ObjectId, ref: 'Song' }],
             requested: [{ type: mongoose.Types.ObjectId, ref: 'Song' }],
             statistics: [{ type: mongoose.Types.ObjectId, ref: 'Song' }],
-            played: [{type: mongoose.Types.ObjectId, ref: 'Song'}],
+            played: [{ type: mongoose.Types.ObjectId, ref: 'Song' }],
             users: [{ type: mongoose.Types.ObjectId, ref: 'User' }]
         }, validate: {
             validator: obj => {

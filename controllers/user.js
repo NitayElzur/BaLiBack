@@ -206,7 +206,8 @@ exports.sendSong = async (req, res) => {
                             requested: [newSong._id],
                             accepted: [],
                             statistics: [newSong._id],
-                            users: [thisUser._id]
+                            users: [thisUser._id],
+                            played: []
                         }
                     }
                 }
