@@ -114,11 +114,12 @@ exports.acceptSong = async (req, res) => {
         const acceptedSongArray = await Song.find({ _id: { $in: acceptedSong } })
         await Establishment.findOneAndUpdate(
             { name: data.establishment },
-            { $set: { [`history.${data.today}.accepted`]: establishment.history[data.today].accepted.concat(acceptedSongArray.map(v => v._id)) } }
-        )
-        await Establishment.findOneAndUpdate(
-            { name: data.establishment },
-            { $set: { [`history.${data.today}.requested`]: establishment.history[data.today].requested.filter(v => !acceptedSongArray.some(j => j._id.toString() === v._id.toString())) } }
+            {
+                $set: {
+                    [`history.${data.today}.accepted`]: establishment.history[data.today].accepted.concat(acceptedSongArray.map(v => v._id)),
+                    [`history.${data.today}.requested`]: establishment.history[data.today].requested.filter(v => !acceptedSongArray.some(j => j._id.toString() === v._id.toString()))
+                }
+            }
         )
         res.status(200).send('ok')
     }
@@ -410,17 +411,17 @@ exports.getEstabBest = async (req, res) => {
 };
 
 /**
- * @param playlist The string of the playlist
- * @param today Todays date
- * @param establishemnt The establishment to push the songs
+ * @param playlist The string of the playlist or the date to pull from
+ * @param today Todays date or the date to populate
+ * @param establishemnt The establishment to push the songs into
  * @returns An array of the first 50 songs of that playlist
  */
 exports.getSongsFromPlaylist = async (req, res) => {
     try {
         let songArr = []
+        let mongoSongArray;
         const { playlist, today, establishment } = req.body;
-        const [playlistId] = playlist.match(/(?<=list=)[^&]*/)
-        const thisEstablishment = await Establishment.findOne({ name: establishment }).populate({
+        let thisEstablishment = await Establishment.findOne({ name: establishment }).populate({
             path: 'history',
             populate: {
                 path: today,
@@ -436,30 +437,61 @@ exports.getSongsFromPlaylist = async (req, res) => {
                 }]
             }
         })
-        if(!thisEstablishment) return res.status(400).send('Establishment does not exist')
-        const ytObj = {
-            part: 'snippet',
-            playlistId,
-            maxResults: 50
-        }
-        let stop = false
-        while (!stop) {
-            const { data } = await youtube.playlistItems.list(ytObj)
-            songArr = songArr.concat(data.items.map(v => {
-                return (
-                    {
-                        name: v.snippet.title,
-                        artist: v.snippet.videoOwnerChannelTitle,
-                        url: `https://www.youtube.com/watch?v=${v.snippet.resourceId.videoId}`,
-                        img: v.snippet.thumbnails.default.url,
-                        uploaded: v.snippet.publishedAt,
-                    }
-                )
+        if (!thisEstablishment) return res.status(400).send('Establishment does not exist')
+        const playlistId = playlist.match(/(?<=list=)[^&]*/)
+        if (playlistId) {
+            const ytObj = {
+                part: 'snippet',
+                playlistId: playlistId[0],
+                maxResults: 50
+            }
+            let stop = false
+            while (!stop) {
+                const { data } = await youtube.playlistItems.list(ytObj)
+                songArr = songArr.concat(data.items.map(v => {
+                    return (
+                        {
+                            name: v.snippet.title,
+                            artist: v.snippet.videoOwnerChannelTitle,
+                            url: `https://www.youtube.com/watch?v=${v.snippet.resourceId.videoId}`,
+                            img: v.snippet.thumbnails.default.url,
+                            uploaded: v.snippet.publishedAt,
+                        }
+                    )
+                }))
+                if (!data.nextPageToken) stop = true
+                else ytObj.pageToken = data.nextPageToken
+            }
+            mongoSongArray = await Song.create(songArr.map(v => {
+                return { ...v, today }
             }))
-            if (!data.nextPageToken) stop = true
-            else ytObj.pageToken = data.nextPageToken
         }
-        const mongoSongArray = await Song.create(songArr)
+        else {
+            thisEstablishment = await Establishment.findOne({_id: thisEstablishment._id}).populate({
+                path: 'history',
+                populate: {
+                    path: playlist,
+                    populate: {
+                        path: 'played',
+                        model: 'Song'
+                    }
+                }
+            })
+            mongoSongArray = await Song.create(thisEstablishment.history[playlist].played.map(v => {
+                delete v.timePlayed
+                delete v.timeRequested
+                return ({
+                    name: v.name,
+                    url: v.url,
+                    img: v.img,
+                    artist: v.artist,
+                    uploaded: v.uploaded,
+                    today,
+                    numOfVotes: [],
+                    numOfSuggests: []
+                })
+            }))
+        }
         if (thisEstablishment.history && Object.keys(thisEstablishment.history).includes(today)) {
             await Establishment.findOneAndUpdate({ name: establishment },
                 {
@@ -480,13 +512,14 @@ exports.getSongsFromPlaylist = async (req, res) => {
                             requested: [],
                             accepted: mongoSongArray.map(v => v._id),
                             statistics: mongoSongArray.map(v => v._id),
-                            users: []
+                            users: [],
+                            played: []
                         }
                     }
                 }
             );
         }
-        res.status(200).send('Success');
+        return res.status(200).send('Success');
     }
     catch (err) {
         res.status(500).send(err.message)
@@ -496,15 +529,31 @@ exports.getSongsFromPlaylist = async (req, res) => {
 /**
  * 
  * @param today The date to change
- * @param song The song that was played
+ * @param song The id of the song that was played
  * @param establishemnt The establishment to change
  * @returns 
  */
 exports.pushToPlayed = async (req, res) => {
     try {
-        const { today, establishemnt, song } = req.body;
-        const thisEstablishment = await Establishment.findOne({ name: establishemnt });
-        if (!thisEstablishment) return res.status(400).send('')
+        const { today, establishment, song } = req.body;
+        const thisEstablishment = await Establishment.findOne({ name: establishment }).populate({
+            path: 'history',
+            populate: {
+                path: today,
+                populate: {
+                    path: 'played',
+                    model: 'Song'
+                }
+            }
+        })
+        if (!thisEstablishment) return res.status(400).send('Establishment does not exist');
+        const thisSong = await Song.findOne({ _id: song });
+        if (!thisSong) return res.status(400).send('Song does not exist')
+        if (thisEstablishment.history[today].played.some(v => v._id.toString() === thisSong._id.toString())) return res.status(200).send('Song was already played')
+        await Establishment.findOneAndUpdate({ _id: thisEstablishment._id },
+            { $set: { [`history.${today}.played`]: [...thisEstablishment.history[today].played, thisSong._id] } }
+        )
+        res.status(200).send('success')
     }
     catch (err) {
         res.status(500).send(err.message)
