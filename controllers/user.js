@@ -178,9 +178,11 @@ exports.sendSong = async (req, res) => {
             if (repeatedSong) {
                 const existingSong = await Song.findOneAndUpdate(
                     { _id: repeatedSong._id },
-                    { $set: { numOfSuggests: [...repeatedSong.numOfSuggests, userId] } }
+                    { $set: { numOfSuggests: [...repeatedSong.numOfSuggests, userId] } },
+                    {new: true}
                 )
                 await User.findOneAndUpdate({ _id: thisUser._id }, { $set: { numOfSongsRequested: [...thisUser.numOfSongsRequested, existingSong._id] } })
+                return res.status(200).send(existingSong)
             }
             else {
                 newSong = await Song.create({ ...data, numOfSuggests: [userId] })
