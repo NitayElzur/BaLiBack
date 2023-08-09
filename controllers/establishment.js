@@ -114,16 +114,26 @@ exports.acceptSong = async (req, res) => {
         })
         let { acceptedSong } = data
         const acceptedSongArray = await Song.find({ _id: { $in: acceptedSong } })
-        await Establishment.findOneAndUpdate(
+        const newEstablishment = await Establishment.findOneAndUpdate(
             { name: data.establishment },
             {
                 $set: {
                     [`history.${data.today}.accepted`]: establishment.history[data.today].accepted.concat(acceptedSongArray.map(v => v._id)),
                     [`history.${data.today}.requested`]: establishment.history[data.today].requested.filter(v => !acceptedSongArray.some(j => j._id.toString() === v._id.toString()))
                 }
+            },
+            {new: true}
+        ).populate({
+            path: "history",
+            populate: {
+                path: data.today,
+                populate: {
+                    path: "accepted",
+                    model: "Song"
+                }
             }
-        )
-        res.status(200).send('ok')
+        })
+        res.status(200).send(newEstablishment.history[data.today].accepted)
     }
     catch (err) {
         res.status(500).send(err.message)
@@ -268,11 +278,21 @@ exports.removeAccept = async (req, res) => {
         })
         let { checkedSong } = data
         const checkedSongArray = await Song.find({ _id: { $in: checkedSong } })
-        await Establishment.findOneAndUpdate(
+        const newEstablishment = await Establishment.findOneAndUpdate(
             { name: data.establishment },
-            { $set: { [`history.${data.today}.accepted`]: establishment.history[data.today].accepted.filter(v => !checkedSongArray.some(j => j._id.toString() === v._id.toString())) } }
-        )
-        res.status(200).send('ok')
+            { $set: { [`history.${data.today}.accepted`]: establishment.history[data.today].accepted.filter(v => !checkedSongArray.some(j => j._id.toString() === v._id.toString())) } },
+            {new: true}
+        ).populate({
+            path: 'history',
+            populate: {
+                path: data.today,
+                populate: {
+                path: 'accepted',
+                model: 'Song'
+                }
+            }
+        })
+        res.status(200).send(newEstablishment.history[data.today].accepted)
     }
     catch (err) {
         res.status(500).send(err.message)
