@@ -122,7 +122,7 @@ exports.acceptSong = async (req, res) => {
                     [`history.${data.today}.requested`]: establishment.history[data.today].requested.filter(v => !acceptedSongArray.some(j => j._id.toString() === v._id.toString()))
                 }
             },
-            {new: true}
+            { new: true }
         ).populate({
             path: "history",
             populate: {
@@ -281,14 +281,14 @@ exports.removeAccept = async (req, res) => {
         const newEstablishment = await Establishment.findOneAndUpdate(
             { name: data.establishment },
             { $set: { [`history.${data.today}.accepted`]: establishment.history[data.today].accepted.filter(v => !checkedSongArray.some(j => j._id.toString() === v._id.toString())) } },
-            {new: true}
+            { new: true }
         ).populate({
             path: 'history',
             populate: {
                 path: data.today,
                 populate: {
-                path: 'accepted',
-                model: 'Song'
+                    path: 'accepted',
+                    model: 'Song'
                 }
             }
         })
@@ -580,6 +580,90 @@ exports.pushToPlayed = async (req, res) => {
         const newSong = await Song.findOneAndUpdate({ _id: song }, updateObj, { new: true })
 
         res.status(200).send(newSong)
+    }
+    catch (err) {
+        res.status(500).send(err.message)
+    }
+}
+
+/**
+ * @param today The date to push into
+ * @param establishment The establishment to change
+ * @param url The url of the song in yt format
+ * @returns The updated accepted array
+ */
+exports.adminSendSong = async (req, res) => {
+    try {
+        const data = req.body
+        const { today, establishment, url } = req.body;
+        const thisEstablishment = await Establishment.findOne({ name: establishment })
+            .populate({
+                path: 'history',
+                populate: {
+                    path: today,
+                    populate: {
+                        path: 'accepted',
+                        model: 'Song'
+                    }
+                }
+            })
+        if (!thisEstablishment) return res.status(400).send('This establishment does not exist');
+        if (thisEstablishment.history && Object.keys(thisEstablishment.history).includes(today)) {
+            if (thisEstablishment.history[today].accepted.some(v => v.url === url)) {
+                const song = thisEstablishment.history[today].accepted[thisEstablishment.history[today].accepted.findIndex(v => v.url === url)];
+                thisEstablishment.history[today].accepted.splice(thisEstablishment.history[today].accepted.findIndex(v => v.url === url), 1);
+                thisEstablishment.history[today].accepted.splice(1, 0, song);
+            }
+            else {
+                const song = await Song.create(data);
+                thisEstablishment.history[today].accepted.splice(1, 0, song);
+            }
+        }
+        else {
+            const song = await Song.create(data)
+            if (!thisEstablishment.history) thisEstablishment.history = {}
+            const newEstablishment = await Establishment.findOneAndUpdate(
+                { name: establishment },
+                {
+                    $set: {
+                        [`history.${today}`]: {
+                            requested: [],
+                            accepted: [song._id],
+                            statistics: [],
+                            users: [],
+                            played: []
+                        }
+                    }
+                },
+                { new: true }
+            ).populate({
+                path: 'history',
+                populate: {
+                    path: today,
+                    populate: {
+                        path: 'accepted',
+                        model: 'Song'
+                    }
+                }
+            })
+            return res.status(200).send(newEstablishment.history[today].accepted)
+        }
+        const newEstablishment = await Establishment.findOneAndUpdate(
+            { name: establishment },
+            { $set: { [`history.${today}.accepted`]: [...thisEstablishment.history[today].accepted.map(v => v._id)] } },
+            { new: true }
+        )
+            .populate({
+                path: 'history',
+                populate: {
+                    path: today,
+                    populate: {
+                        path: 'accepted',
+                        model: 'Song'
+                    }
+                }
+            })
+        res.status(200).send(newEstablishment.history[today].accepted)
     }
     catch (err) {
         res.status(500).send(err.message)
