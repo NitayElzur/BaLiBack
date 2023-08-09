@@ -518,7 +518,7 @@ exports.getSongsFromPlaylist = async (req, res) => {
                 }
             );
         }
-        return res.status(200).send('Success');
+        return res.status(200).send(mongoSongArray);
     }
     catch (err) {
         res.status(500).send(err.message)
