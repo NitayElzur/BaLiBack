@@ -79,7 +79,7 @@ exports.updateEstablishment = async (req, res) => {
         if (playlists && playlists.length > 0) {
             if (playlists.some(v => v.name == null)) return res.status(400).send('Playlist must come in pairs of name and value')
             else {
-                updateObj.playlists = establishment.playlists.concat(playlists)
+                updateObj.playlists = establishment.playlists ? establishment.playlists.concat(playlists) : playlists
             }
         }
         const result = await Establishment.findOneAndUpdate({ name }, updateObj, { new: true })
@@ -365,14 +365,16 @@ exports.getEstabBest = async (req, res) => {
         if (!thisEstablishment) return res.status(400).send('Establishment does not exist')
         let thisEstablishmentValues = Object.values(thisEstablishment.history)
         if (number) thisEstablishmentValues = thisEstablishmentValues.slice(-number)
-        const allSongIds = thisEstablishmentValues.flatMap(day => day.accepted);
+        const allSongIds = thisEstablishmentValues.flatMap(day => day?.played);
         const allSongs = await Song.find({
             _id: { $in: allSongIds }
         });
         const songMap = allSongs.reduce((map, song) => map.set(String(song._id), song), new Map());
         for (let date in thisEstablishment.history) {
-            thisEstablishment.history[date].accepted = thisEstablishment.history[date].accepted.map(songId => songMap.get(String(songId)));
-            totalAccepted.push(thisEstablishment.history[date].accepted);
+            if (thisEstablishment.history[date].played) {
+                thisEstablishment.history[date].played = thisEstablishment.history[date].played.map(songId => songMap.get(String(songId)));
+                totalAccepted.push(thisEstablishment.history[date].played);
+            }
         }
         totalAccepted = totalAccepted.filter(v => v[0] != null)
         const playCountMap = new Map();
@@ -444,8 +446,8 @@ exports.getSongsFromPlaylist = async (req, res) => {
                 playlistId: playlistId[0],
                 maxResults: 50
             }
-            let stop = false
-            while (!stop) {
+            let i = 0
+            while (i < 4) {
                 const { data } = await youtube.playlistItems.list(ytObj)
                 songArr = songArr.concat(data.items.map(v => {
                     return (
@@ -458,9 +460,11 @@ exports.getSongsFromPlaylist = async (req, res) => {
                         }
                     )
                 }))
-                if (!data.nextPageToken) stop = true
+                if (!data.nextPageToken) i = 4
                 else ytObj.pageToken = data.nextPageToken
+                i++
             }
+            songArr = songArr.filter(v => v.name !== 'Deleted Video' && v.name !== 'Private Video')
             mongoSongArray = await Song.create(songArr.map(v => {
                 return { ...v, today }
             }))
