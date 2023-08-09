@@ -453,7 +453,7 @@ exports.getSongsFromPlaylist = async (req, res) => {
                             name: v.snippet.title,
                             artist: v.snippet.videoOwnerChannelTitle,
                             url: `https://www.youtube.com/watch?v=${v.snippet.resourceId.videoId}`,
-                            img: v.snippet.thumbnails.default.url,
+                            img: v.snippet.thumbnails.default?.url,
                             uploaded: v.snippet.publishedAt,
                         }
                     )
