@@ -19,7 +19,7 @@ app.use('/establishment', establishmentRoute);
 app.use('/statistics', statisticsRoute);
 
 app.get('/', (req, res) => {
-    res.status(200).send(process.env.CLIENT)
+    res.status(200).send('Hello world')
 })
 const server = app.listen(3000, () => {
     console.log('Server running');
