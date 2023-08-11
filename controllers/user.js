@@ -155,7 +155,7 @@ exports.sendSong = async (req, res) => {
         const { today, userId } = req.body;
         const thisUser = await User.findOne({ _id: userId });
         if (!thisUser) return res.status(400).send('This user does not exist')
-        if (thisUser.numOfSongsRequested.length > 2) return res.status(400).send('This user exceeded its songs for today')
+        if (thisUser.numOfSongsRequested.length > 19) return res.status(400).send('This user exceeded its songs for today')
         if (!userId) return res.status(400).send('Provide a user id');
         const establishment = await Establishment.findOne({ name: data.establishment }).populate({
             path: 'history',
